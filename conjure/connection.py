@@ -1,8 +1,13 @@
 from .exceptions import ConnectionError
-from pymongo.connection import Connection
+from pymongo import MongoClient
 from pymongo.uri_parser import parse_uri
 
 _connections = {}
+
+try:
+    import gevent
+except ImportError:
+    gevent = None
 
 
 def _get_connection(hosts):
@@ -14,7 +19,7 @@ def _get_connection(hosts):
 
     if connection is None:
         try:
-            connection = _connections[key] = Connection(hosts)
+            connection = _connections[key] = MongoClient(hosts, use_greenlets=gevent is not None)
         except Exception as e:
             raise ConnectionError(e.message)
 
@@ -22,7 +27,7 @@ def _get_connection(hosts):
 
 
 def connect(uri):
-    parsed_uri = parse_uri(uri, Connection.PORT)
+    parsed_uri = parse_uri(uri)
 
     hosts = parsed_uri['nodelist']
     username = parsed_uri['username']
